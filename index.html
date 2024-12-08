@@ -1,0 +1,147 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>NYC Restaurants by Borough</title>
+  <script src="https://d3js.org/d3.v7.min.js"></script>
+  <style>
+    body {
+      font-family: "Courier New", Courier, monospace;
+      margin: 0;
+      padding: 20px;
+      background-color: #eaf6ff; 
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      min-height: 100vh;
+      text-align: center;
+    }
+    h1 {
+      color: #2a4d69; 
+      font-size: 2.5rem;
+      margin-bottom: 10px;
+    }
+    p {
+      color: #639fab; 
+      font-size: 1.2rem;
+      margin-bottom: 30px;
+    }
+    svg {
+      background-color: #ffffff; 
+      border: 2px solid #a4d4f2;
+      border-radius: 15px;
+      box-shadow: 0px 4px 10px rgba(0, 0, 0, 0.1); /* 添加阴影 */
+    }
+    .bar {
+      fill: #82c4f8; /* 柱状图填充颜色 */
+    }
+    .bar:hover {
+      fill: #5a9cc7; /* 鼠标悬停颜色 */
+      cursor: pointer;
+    }
+    .x-axis text {
+      font-family: "Courier New", Courier, monospace; 
+      font-size: 14px;
+      fill: #2a4d69; 
+    }
+    .y-axis text {
+      font-size: 14px;
+      fill: #2a4d69; 
+    }
+    .label {
+      font-size: 14px;
+      font-weight: bold;
+      fill: #2a4d69; 
+    }
+  </style>
+</head>
+<body>
+  <h1>NYC Restaurants by Borough</h1>
+  <p>Data Source: NYC Open Restaurants API</p>
+  <div id="chart-container" style="width: 90%; max-width: 800px;">
+    <svg id="chart"></svg>
+  </div>
+  <script>
+    const apiUrl = "https://data.cityofnewyork.us/resource/4dx7-axux.json?$limit=5000";
+    const svgWidth = 800;
+    const svgHeight = 400;
+    const margin = { top: 20, right: 20, bottom: 60, left: 50 }; 
+
+    const width = svgWidth - margin.left - margin.right;
+    const height = svgHeight - margin.top - margin.bottom;
+
+
+    const svg = d3.select("#chart")
+                  .attr("width", svgWidth)
+                  .attr("height", svgHeight)
+                  .append("g")
+                  .attr("transform", `translate(${margin.left}, ${margin.top})`);
+
+
+    d3.json(apiUrl).then(data => {
+      if (!data || data.length === 0) {
+        console.error("No data found.");
+        return;
+      }
+
+   
+      const boroughCounts = {};
+      data.forEach(d => {
+        const borough = d.borough || "Unknown";
+        boroughCounts[borough] = (boroughCounts[borough] || 0) + 1;
+      });
+
+      const dataset = Object.entries(boroughCounts).map(([borough, count]) => ({
+        borough,
+        count
+      }));
+
+
+      const x = d3.scaleBand()
+                  .domain(dataset.map(d => d.borough))
+                  .range([0, width])
+                  .padding(0.2);
+
+      const y = d3.scaleLinear()
+                  .domain([0, d3.max(dataset, d => d.count)])
+                  .range([height, 0]);
+
+
+      svg.append("g")
+         .attr("transform", `translate(0, ${height})`)
+         .call(d3.axisBottom(x))
+         .selectAll("text")
+         .style("text-anchor", "middle"); 
+
+
+      svg.append("g")
+         .call(d3.axisLeft(y));
+
+
+      svg.selectAll(".bar")
+         .data(dataset)
+         .enter()
+         .append("rect")
+         .attr("class", "bar")
+         .attr("x", d => x(d.borough))
+         .attr("y", d => y(d.count))
+         .attr("width", x.bandwidth())
+         .attr("height", d => height - y(d.count));
+
+
+      svg.selectAll(".label")
+         .data(dataset)
+         .enter()
+         .append("text")
+         .attr("class", "label")
+         .attr("x", d => x(d.borough) + x.bandwidth() / 2)
+         .attr("y", d => y(d.count) - 5)
+         .attr("text-anchor", "middle")
+         .text(d => d.count);
+    }).catch(error => {
+      console.error("Error loading data:", error);
+    });
+  </script>
+</body>
+</html>
